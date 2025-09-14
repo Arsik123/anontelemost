@@ -4,145 +4,251 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Анонимные видеовстречи</title>
+  <meta name="color-scheme" content="dark light">
   <style>
-    :root{--bg:#0b0f14;--panel:#121821;--text:#e8f0fb;--muted:#94a3b8;--brand:#22c55e}
+    :root{
+      --bg: #0b0f14; --panel:#111824; --panel-2:#0d131c; --text:#e7eef9; --muted:#94a3b8; --brand:#22c55e; --border:#1f2937;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f7fafc; --panel:#ffffff; --panel-2:#f3f7fb; --text:#0b1220; --muted:#5b6b7f; --brand:#16a34a; --border:#e5e7eb; }
+    }
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
-    header{padding:16px 20px;border-bottom:1px solid #1f2937;background:#0c121a;position:sticky;top:0;z-index:20}
-    h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.2px}
-    main{display:grid;grid-template-rows:auto 1fr}
-    #home{max-width:880px;margin:48px auto;padding:24px;background:var(--panel);border:1px solid #1f2937;border-radius:16px}
-    #home h2{margin:0 0 12px 0;font-size:24px}
+    a{color:#10b981;text-decoration:none}
+    header{position:sticky;top:0;z-index:30;backdrop-filter:saturate(1.2) blur(6px);background:color-mix(in oklab, var(--bg) 85%, transparent);border-bottom:1px solid var(--border)}
+    .container{max-width:960px;margin:0 auto;padding:16px 20px}
+    h1{margin:0;font-size:18px;font-weight:650;letter-spacing:.2px}
+
+    /* Home */
+    #home{display:grid;place-items:center;min-height:calc(100vh - 64px)}
+    .hero{width:min(920px,95vw);background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px 20px;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+    .hero h2{margin:0 0 8px 0;font-size:28px}
+    .sub{color:var(--muted);margin:0 0 18px 0}
     .row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
-    input,button{padding:10px 12px;border-radius:12px;border:1px solid #223042;background:#0e1520;color:var(--text)}
+    input,button{padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--panel-2);color:var(--text);font-size:14px}
     input{min-width:260px}
-    button{cursor:pointer;background:#111c2a}
-    button.primary{background:var(--brand);border-color:#16a34a;color:#06210f;font-weight:700}
-    button:active{transform:translateY(1px)}
+    button{cursor:pointer}
+    button.primary{background:var(--brand);border-color:color-mix(in oklab, var(--brand) 75%, black);color:#032310;font-weight:700}
+    button.ghost{background:transparent}
     .hint{color:var(--muted);font-size:12px}
-    #meet{display:none;position:fixed;inset:0;}
-    #stage{width:100%;height:100%;}
-    #toolbar{position:fixed;right:16px;top:64px;display:flex;gap:8px;z-index:30}
-    #toolbar button{background:#0c121a;border-color:#1f2937}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid #243244;background:#0c121a;color:#cbd5e1;font-size:12px}
-    a{color:#86efac;text-decoration:none}
+    .callout{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px dashed var(--border);border-radius:12px;padding:10px 12px;margin-top:8px}
+
+    /* Meet stage */
+    #meet{display:none}
+    #stage-wrap{position:fixed;inset:0;display:grid;grid-template-rows:52px 1fr}
+    #toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel-2);border-bottom:1px solid var(--border)}
+    #stage{width:100%;height:100%}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--muted);font-size:12px}
+    .spacer{flex:1}
+    .hidden{display:none !important}
+    #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);padding:10px 14px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s ease}
+    #toast.show{opacity:1}
+    #spinner{display:none;place-items:center;position:fixed;inset:0;background:color-mix(in oklab, var(--bg) 75%, transparent);z-index:60}
+    .loader{width:32px;height:32px;border-radius:50%;border:3px solid color-mix(in oklab, var(--text) 20%, transparent);border-top-color:var(--brand);animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
-  <header><h1>Анонимные видеовстречи (на базе Jitsi)</h1></header>
-  <main>
-    <section id="home">
-      <h2>Создай или подключись по ссылке</h2>
+  <header>
+    <div class="container">
+      <h1>Анонимные видеовстречи</h1>
+    </div>
+  </header>
+
+  <main id="home">
+    <div class="hero">
+      <h2>Создай встречу за один клик</h2>
+      <p class="sub">Полностью статическая страница на GitHub Pages. Видео/аудио — через публичный SFU Jitsi (meet.jit.si). Без аккаунтов, только ссылка.</p>
+
       <div class="row">
-        <label>Ник (необязательно): <input id="nick" placeholder="Гость"/></label>
+        <label>Ник&nbsp;<span class="hint">(необязательно)</span><br>
+          <input id="nick" placeholder="Гость" autocomplete="name" />
+        </label>
       </div>
+
       <div class="row">
         <button id="create" class="primary">Создать встречу</button>
-        <span class="hint">Будет сгенерирована случайная комната</span>
+        <div class="callout">
+          <div class="hint">Будет сгенерирована случайная комната. Отправь ссылку друзьям.</div>
+        </div>
       </div>
+
       <div class="row">
-        <input id="joinInput" placeholder="Вставь код комнаты или ссылку"/>
+        <input id="joinInput" placeholder="Вставь код комнаты или ссылку (meet.jit.si/ROOM)"/>
         <button id="join">Подключиться</button>
       </div>
-      <p class="hint">Ссылки выглядят так: <span id="example"></span></p>
-      <p class="hint">Это полностью статическая страница на GitHub Pages. Медиа‑трафик идёт через публичную инфраструктуру Jitsi (meet.jit.si). Никаких аккаунтов, только ссылка.</p>
-    </section>
-    <section id="meet">
-      <div id="toolbar">
-        <span id="sharePill" class="pill" style="display:none"></span>
-        <button id="copy" title="Скопировать ссылку">Скопировать ссылку</button>
-        <button id="leave" title="Покинуть встречу">Выйти</button>
-      </div>
-      <div id="stage"></div>
-    </section>
+
+      <p class="hint">Пример ссылки: <span id="example"></span></p>
+      <p class="hint">Важно: meet.jit.si — публичная инфраструктура без SLA. Для стабильных «сотен» участников стоит перейти на свой кластер Jitsi/LiveKit.</p>
+    </div>
   </main>
 
+  <section id="meet">
+    <div id="stage-wrap">
+      <div id="toolbar">
+        <span id="roomPill" class="pill hidden"></span>
+        <span id="countPill" class="pill hidden"></span>
+        <div class="spacer"></div>
+        <button id="copy">Скопировать ссылку</button>
+        <button id="openTab" class="ghost">Открыть в новой вкладке</button>
+        <button id="leave" class="ghost">Выйти</button>
+      </div>
+      <div id="stage"></div>
+    </div>
+  </section>
+
+  <div id="spinner"><div class="loader"></div></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
   <script>
-    // Параметры
-    const domain = 'meet.jit.si'; // публичный Jitsi
-
-    // Утилиты
-    function $(id){ return document.getElementById(id); }
-    function randomSlug() {
-      const n = crypto.getRandomValues(new Uint32Array(1))[0];
-      return 'rm-' + n.toString(36);
-    }
-    function normalizeRoom(input){
+    // ---------- helpers ----------
+    const $ = sel => document.getElementById(sel);
+    const show = (el, on=true)=> el.classList.toggle('hidden', !on);
+    const toast = (t)=>{ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1600); };
+    const randomSlug = () => 'rm-' + Math.random().toString(36).slice(2,8) + '-' + Date.now().toString(36).slice(-4);
+    const linkFor = room => location.origin + location.pathname + '#' + encodeURIComponent(room);
+    const normalizeRoom = (input)=>{
       if (!input) return null;
-      try {
-        const url = new URL(input, location.href);
-        // если это ссылка на Jitsi или на эту же страницу, берём хвост
-        const isJitsi = /meet\.jit\.si$/.test(url.hostname);
-        if (isJitsi) return decodeURIComponent(url.pathname.replace(/^\//,'')) || null;
-      } catch(_) {
-        // не URL → трактуем как room id
-      }
+      try{
+        const u = new URL(input, location.href);
+        if (/meet\.jit\.si$/i.test(u.hostname)) return decodeURIComponent(u.pathname.replace(/^\//,''));
+        if (u.hash?.length>1) return decodeURIComponent(u.hash.slice(1));
+      }catch{ /* not a URL */ }
       return input.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,120) || null;
+    };
+
+    // ---------- load Jitsi IFrame API safely ----------
+    let jitsiReady = null;
+    function loadJitsi(){
+      if (window.JitsiMeetExternalAPI) return Promise.resolve();
+      if (jitsiReady) return jitsiReady;
+      $('spinner').style.display = 'grid';
+      jitsiReady = new Promise((resolve, reject)=>{
+        const s = document.createElement('script');
+        s.src = 'https://meet.jit.si/external_api.js';
+        s.async = true;
+        s.onload = () => { $('spinner').style.display = 'none'; resolve(); };
+        s.onerror = () => { $('spinner').style.display = 'none'; reject(new Error('Не удалось загрузить Jitsi API')); };
+        document.head.appendChild(s);
+      });
+      return jitsiReady;
     }
 
-    // Дешёвый роутинг по hash: #<room>
-    function linkFor(room){ return location.origin + location.pathname + '#' + encodeURIComponent(room); }
+    // ---------- meeting state ----------
+    const domain = 'meet.jit.si';
+    let api = null, currentRoom = null;
 
-    let api = null;
+    async function startMeeting(room, nick){
+      try{ await loadJitsi(); }catch(e){
+        // graceful fallback: предлагаем открыть прямую ссылку
+        const direct = 'https://'+domain+'/' + encodeURIComponent(room);
+        toast('API Jitsi недоступен. Откроем встречу в новой вкладке…');
+        window.open(direct, '_blank');
+        return;
+      }
 
-    function startMeeting(room, nick){
-      const parentNode = $('stage');
       $('home').style.display = 'none';
       $('meet').style.display = 'block';
-      const options = {
+      $('spinner').style.display = 'grid';
+
+      const opts = {
         roomName: room,
-        parentNode,
+        parentNode: $('stage'),
+        width: '100%', height: '100%',
         userInfo: { displayName: nick || 'Гость' },
         configOverwrite: {
           disableDeepLinking: true,
           prejoinConfig: { enabled: true },
           startWithAudioMuted: false,
-          startWithVideoMuted: false
+          startWithVideoMuted: false,
         },
         interfaceConfigOverwrite: {
-          // скрыть лишние кнопки приглашения, чтобы не путать пользователей
-          HIDE_INVITE_MORE_HEADER: true
+          MOBILE_APP_PROMO: false,
         }
       };
-      api = new JitsiMeetExternalAPI(domain, options);
+
+      currentRoom = room;
       const share = linkFor(room);
-      $('sharePill').textContent = room;
-      $('sharePill').style.display = 'inline-block';
-      $('copy').onclick = async () => { try { await navigator.clipboard.writeText(share); $('copy').textContent = 'Скопировано'; setTimeout(()=>$('copy').textContent='Скопировать ссылку',1500);} catch(e){ alert(share); } };
-      $('leave').onclick = () => api.executeCommand('hangup');
-      api.addListener('videoConferenceJoined', () => {
+      $('copy').onclick = async () => {
+        try { await navigator.clipboard.writeText(share); toast('Ссылка скопирована'); } catch { prompt('Скопируйте ссылку вручную:', share); }
+      };
+      $('openTab').onclick = () => window.open('https://'+domain+'/' + encodeURIComponent(room), '_blank');
+      $('leave').onclick = () => {
+        try { api?.executeCommand('hangup'); } catch {}
+        // страховка на случай, если событие не придёт
+        setTimeout(cleanupToHome, 2000);
+      };
+
+      try{
+        api = new JitsiMeetExternalAPI(domain, opts);
+      }catch(e){
+        $('spinner').style.display = 'none';
+        toast('Не удалось встроить встречу. Откроем в новой вкладке.');
+        window.open('https://'+domain+'/' + encodeURIComponent(room), '_blank');
+        cleanupToHome();
+        return;
+      }
+
+      $('spinner').style.display = 'none';
+      $('roomPill').textContent = room; show($('roomPill'), true);
+      show($('countPill'), true);
+
+      api.addListener('videoConferenceJoined', ({id}) => {
         history.replaceState(null, '', '#' + encodeURIComponent(room));
         document.title = 'Встреча · ' + room;
       });
-      api.addListener('readyToClose', () => {
-        api.dispose(); api = null; location.href = location.origin + location.pathname; 
+      const updateCount = async () => {
+        try { const p = await api.getParticipantsInfo(); $('countPill').textContent = 'Участников: ' + p.length; } catch {}
+      }
+      api.addListener('participantJoined', updateCount);
+      api.addListener('participantLeft', updateCount);
+      api.addListener('videoConferenceJoined', updateCount);
+
+      api.addListener('readyToClose', cleanupToHome);
+      api.addListener('videoConferenceLeft', cleanupToHome);
+      api.addListener('errorOccurred', e => {
+        console.warn('Jitsi error', e);
+        toast('Ошибка Jitsi: ' + (e?.message||''));
       });
     }
 
-    // Главная логика
+    function cleanupToHome(){
+      try{ api?.dispose(); }catch{}
+      api = null; currentRoom = null;
+      show($('roomPill'), false); show($('countPill'), false);
+      document.title = 'Анонимные видеовстречи';
+      $('meet').style.display = 'none';
+      $('home').style.display = 'grid';
+      history.replaceState(null, '', location.pathname);
+    }
+
+    // ---------- init ----------
     (function init(){
-      const example = linkFor('demo-room'); $('example').textContent = example;
-      const hashRoom = decodeURIComponent(location.hash.replace(/^#/,'').trim());
-      if (hashRoom) {
-        const nick = localStorage.getItem('nick') || 'Гость';
-        startMeeting(hashRoom, nick);
-        return;
-      }
+      $('example').textContent = linkFor('demo-room');
+
+      // restore nick
+      const saved = localStorage.getItem('nick'); if (saved) $('nick').value = saved;
+
       $('create').onclick = () => {
         const nick = $('nick').value.trim(); if (nick) localStorage.setItem('nick', nick);
-        const room = randomSlug();
-        startMeeting(room, nick);
+        const room = randomSlug(); startMeeting(room, nick);
       };
       $('join').onclick = () => {
         const nick = $('nick').value.trim(); if (nick) localStorage.setItem('nick', nick);
         const parsed = normalizeRoom($('joinInput').value.trim());
-        if (!parsed) { $('joinInput').focus(); return; }
+        if (!parsed) { $('joinInput').focus(); toast('Введите ссылку или код комнаты'); return; }
         startMeeting(parsed, nick);
       };
+      $('joinInput').addEventListener('keydown', e=>{ if (e.key==='Enter') $('join').click(); });
+
+      // deep link via hash
+      const hashRoom = decodeURIComponent(location.hash.replace(/^#/,'').trim());
+      if (hashRoom) {
+        const nick = $('nick').value.trim() || localStorage.getItem('nick') || 'Гость';
+        startMeeting(hashRoom, nick);
+      }
     })();
   </script>
-
-  <!-- Внешний API Jitsi -->
-  <script src="https://meet.jit.si/external_api.js"></script>
 </body>
 </html>
