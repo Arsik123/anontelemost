@@ -38,6 +38,9 @@
     #meet{display:none}
     #stage-wrap{position:fixed;inset:0;display:grid;grid-template-rows:52px 1fr}
     #toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel-2);border-bottom:1px solid var(--border)}
+    #hostHelp{display:none;gap:10px;align-items:center;margin-left:8px}
+    #hostHelp .msg{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px}
+    #hostHelp button{padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text)}
     #stage{width:100%;height:100%}
     .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--muted);font-size:12px}
     .spacer{flex:1}
@@ -48,6 +51,10 @@
     .loader{width:32px;height:32px;border-radius:50%;border:3px solid color-mix(in oklab, var(--text) 20%, transparent);border-top-color:var(--brand);animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
+  <script>
+    // Small inline SVG icons
+    const ICON_INFO = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
+  </script>
 </head>
 <body>
   <header>
@@ -89,7 +96,15 @@
       <div id="toolbar">
         <span id="roomPill" class="pill hidden"></span>
         <span id="countPill" class="pill hidden"></span>
+        <div id="hostHelp">
+          <span class="msg"><span id="hostIcon"></span><span>Если видите «Ждём организатора», откройте встречу на сайте Jitsi и нажмите «Я организатор», затем войдите (Google/GitHub). После входа эта вкладка подключится автоматически.</span></span>
+          <button id="hostOpen">Открыть как организатор</button>
+        </div>
         <div class="spacer"></div>
+        <button id="copy">Скопировать ссылку</button>
+        <button id="openTab" class="ghost">Открыть в новой вкладке</button>
+        <button id="leave" class="ghost">Выйти</button>
+      </div>
         <button id="copy">Скопировать ссылку</button>
         <button id="openTab" class="ghost">Открыть в новой вкладке</button>
         <button id="leave" class="ghost">Выйти</button>
@@ -137,7 +152,7 @@
 
     // ---------- meeting state ----------
     const domain = 'meet.jit.si';
-    let api = null, currentRoom = null;
+    let api = null, currentRoom = null, joinWatchdog = null;
 
     async function startMeeting(room, nick){
       try{ await loadJitsi(); }catch(e){
@@ -174,6 +189,9 @@
         try { await navigator.clipboard.writeText(share); toast('Ссылка скопирована'); } catch { prompt('Скопируйте ссылку вручную:', share); }
       };
       $('openTab').onclick = () => window.open('https://'+domain+'/' + encodeURIComponent(room), '_blank');
+      $('hostOpen').onclick = () => window.open('https://'+domain+'/' + encodeURIComponent(room), '_blank');
+      $('hostIcon').innerHTML = ICON_INFO; 
+      show($('hostHelp'), true);
       $('leave').onclick = () => {
         try { api?.executeCommand('hangup'); } catch {}
         // страховка на случай, если событие не придёт
@@ -197,6 +215,10 @@
       api.addListener('videoConferenceJoined', ({id}) => {
         history.replaceState(null, '', '#' + encodeURIComponent(room));
         document.title = 'Встреча · ' + room;
+        if (joinWatchdog) { clearTimeout(joinWatchdog); joinWatchdog = null; }
+        show($('hostHelp'), false);
+      });
+        document.title = 'Встреча · ' + room;
       });
       const updateCount = async () => {
         try { const p = await api.getParticipantsInfo(); $('countPill').textContent = 'Участников: ' + p.length; } catch {}
@@ -204,6 +226,11 @@
       api.addListener('participantJoined', updateCount);
       api.addListener('participantLeft', updateCount);
       api.addListener('videoConferenceJoined', updateCount);
+
+      // таймер-подсказка: если за 10с не подключились, предлагаем открыть как организатор
+      if (!joinWatchdog){
+        joinWatchdog = setTimeout(()=>{ show($('hostHelp'), true); toast('Если видите «Ждём организатора», войдите как организатор'); }, 10000);
+      }
 
       api.addListener('readyToClose', cleanupToHome);
       api.addListener('videoConferenceLeft', cleanupToHome);
