@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Анонимные видеовстречи</title>
+  <style>
+    :root{--bg:#0b0f14;--panel:#121821;--text:#e8f0fb;--muted:#94a3b8;--brand:#22c55e}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+    header{padding:16px 20px;border-bottom:1px solid #1f2937;background:#0c121a;position:sticky;top:0;z-index:20}
+    h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.2px}
+    main{display:grid;grid-template-rows:auto 1fr}
+    #home{max-width:880px;margin:48px auto;padding:24px;background:var(--panel);border:1px solid #1f2937;border-radius:16px}
+    #home h2{margin:0 0 12px 0;font-size:24px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+    input,button{padding:10px 12px;border-radius:12px;border:1px solid #223042;background:#0e1520;color:var(--text)}
+    input{min-width:260px}
+    button{cursor:pointer;background:#111c2a}
+    button.primary{background:var(--brand);border-color:#16a34a;color:#06210f;font-weight:700}
+    button:active{transform:translateY(1px)}
+    .hint{color:var(--muted);font-size:12px}
+    #meet{display:none;position:fixed;inset:0;}
+    #stage{width:100%;height:100%;}
+    #toolbar{position:fixed;right:16px;top:64px;display:flex;gap:8px;z-index:30}
+    #toolbar button{background:#0c121a;border-color:#1f2937}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid #243244;background:#0c121a;color:#cbd5e1;font-size:12px}
+    a{color:#86efac;text-decoration:none}
+  </style>
+</head>
+<body>
+  <header><h1>Анонимные видеовстречи (на базе Jitsi)</h1></header>
+  <main>
+    <section id="home">
+      <h2>Создай или подключись по ссылке</h2>
+      <div class="row">
+        <label>Ник (необязательно): <input id="nick" placeholder="Гость"/></label>
+      </div>
+      <div class="row">
+        <button id="create" class="primary">Создать встречу</button>
+        <span class="hint">Будет сгенерирована случайная комната</span>
+      </div>
+      <div class="row">
+        <input id="joinInput" placeholder="Вставь код комнаты или ссылку"/>
+        <button id="join">Подключиться</button>
+      </div>
+      <p class="hint">Ссылки выглядят так: <span id="example"></span></p>
+      <p class="hint">Это полностью статическая страница на GitHub Pages. Медиа‑трафик идёт через публичную инфраструктуру Jitsi (meet.jit.si). Никаких аккаунтов, только ссылка.</p>
+    </section>
+    <section id="meet">
+      <div id="toolbar">
+        <span id="sharePill" class="pill" style="display:none"></span>
+        <button id="copy" title="Скопировать ссылку">Скопировать ссылку</button>
+        <button id="leave" title="Покинуть встречу">Выйти</button>
+      </div>
+      <div id="stage"></div>
+    </section>
+  </main>
+
+  <script>
+    // Параметры
+    const domain = 'meet.jit.si'; // публичный Jitsi
+
+    // Утилиты
+    function $(id){ return document.getElementById(id); }
+    function randomSlug() {
+      const n = crypto.getRandomValues(new Uint32Array(1))[0];
+      return 'rm-' + n.toString(36);
+    }
+    function normalizeRoom(input){
+      if (!input) return null;
+      try {
+        const url = new URL(input, location.href);
+        // если это ссылка на Jitsi или на эту же страницу, берём хвост
+        const isJitsi = /meet\.jit\.si$/.test(url.hostname);
+        if (isJitsi) return decodeURIComponent(url.pathname.replace(/^\//,'')) || null;
+      } catch(_) {
+        // не URL → трактуем как room id
+      }
+      return input.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,120) || null;
+    }
+
+    // Дешёвый роутинг по hash: #<room>
+    function linkFor(room){ return location.origin + location.pathname + '#' + encodeURIComponent(room); }
+
+    let api = null;
+
+    function startMeeting(room, nick){
+      const parentNode = $('stage');
+      $('home').style.display = 'none';
+      $('meet').style.display = 'block';
+      const options = {
+        roomName: room,
+        parentNode,
+        userInfo: { displayName: nick || 'Гость' },
+        configOverwrite: {
+          disableDeepLinking: true,
+          prejoinConfig: { enabled: true },
+          startWithAudioMuted: false,
+          startWithVideoMuted: false
+        },
+        interfaceConfigOverwrite: {
+          // скрыть лишние кнопки приглашения, чтобы не путать пользователей
+          HIDE_INVITE_MORE_HEADER: true
+        }
+      };
+      api = new JitsiMeetExternalAPI(domain, options);
+      const share = linkFor(room);
+      $('sharePill').textContent = room;
+      $('sharePill').style.display = 'inline-block';
+      $('copy').onclick = async () => { try { await navigator.clipboard.writeText(share); $('copy').textContent = 'Скопировано'; setTimeout(()=>$('copy').textContent='Скопировать ссылку',1500);} catch(e){ alert(share); } };
+      $('leave').onclick = () => api.executeCommand('hangup');
+      api.addListener('videoConferenceJoined', () => {
+        history.replaceState(null, '', '#' + encodeURIComponent(room));
+        document.title = 'Встреча · ' + room;
+      });
+      api.addListener('readyToClose', () => {
+        api.dispose(); api = null; location.href = location.origin + location.pathname; 
+      });
+    }
+
+    // Главная логика
+    (function init(){
+      const example = linkFor('demo-room'); $('example').textContent = example;
+      const hashRoom = decodeURIComponent(location.hash.replace(/^#/,'').trim());
+      if (hashRoom) {
+        const nick = localStorage.getItem('nick') || 'Гость';
+        startMeeting(hashRoom, nick);
+        return;
+      }
+      $('create').onclick = () => {
+        const nick = $('nick').value.trim(); if (nick) localStorage.setItem('nick', nick);
+        const room = randomSlug();
+        startMeeting(room, nick);
+      };
+      $('join').onclick = () => {
+        const nick = $('nick').value.trim(); if (nick) localStorage.setItem('nick', nick);
+        const parsed = normalizeRoom($('joinInput').value.trim());
+        if (!parsed) { $('joinInput').focus(); return; }
+        startMeeting(parsed, nick);
+      };
+    })();
+  </script>
+
+  <!-- Внешний API Jitsi -->
+  <script src="https://meet.jit.si/external_api.js"></script>
+</body>
+</html>
